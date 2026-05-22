@@ -1,2 +1,15 @@
 telebot
 Faker
+telebot
+Faker
+requests_toolbelt
+pyTelegramBotAPI
+requests
+cloudscraper
+beautifulsoup4
+Telebot
+Flask
+faker
+pycountry
+user_agent
+fake_useragent
