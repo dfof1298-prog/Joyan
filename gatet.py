@@ -1,4 +1,4 @@
-# ==================== gatet.py (النسخة النهائية - تم حل مشكلة INVALID EMAIL ADDRESS) ====================
+# ==================== gatet.py (النسخة النهائية - تم إضافة ردود Fraud و Risk Threshold) ====================
 
 import requests, json, re, random, sys, os, time, base64, uuid
 from requests_toolbelt.multipart.encoder import MultipartEncoder
@@ -376,81 +376,106 @@ def ch(ccx):
             
             # ==================== ردود Braintree الكاملة ====================
             
+            # 1. نجاح
             if 'charged' in search_text or 'success' in search_text or 'completed' in search_text or 'approved' in search_text:
                 return 'CHARGED'
             
+            # 2. رصيد غير كافٍ
             if 'insufficient funds' in search_text or 'insufficient_funds' in search_text:
                 return 'INSUFFICIENT FUNDS'
             
+            # 3. CVV خطأ
             if 'cvv' in search_text or 'cvv2 failure' in search_text or 'cvv mismatch' in search_text:
                 return 'CVV MISMATCH'
             
+            # 4. بطاقة منتهية
             if 'expired card' in search_text or 'expired_card' in search_text:
                 return 'EXPIRED CARD'
             
-            if 'fraud' in search_text or 'suspected fraud' in search_text:
+            # 5. احتيال (Fraud) - تم توسيعه
+            if ('fraud' in search_text or 'suspected fraud' in search_text or 
+                'gateway rejected: fraud' in search_text or 'gateway rejected: risk threshold' in search_text or
+                'processor declined - fraud' in search_text or 'processor declined - risk threshold' in search_text):
                 return 'SUSPECTED FRAUD'
             
+            # 6. Risk Threshold - منفصل أحياناً
+            if 'risk threshold' in search_text or 'risk_threshold' in search_text or 'risk score' in search_text:
+                return 'RISK THRESHOLD EXCEEDED'
+            
+            # 7. Do Not Honor
             if 'do not honor' in search_text or 'do_not_honor' in search_text:
                 return 'DO NOT HONOR'
             
+            # 8. Closed Card
             if 'closed card' in search_text or 'card closed' in search_text:
                 return 'CLOSED CARD'
             
+            # 9. Call Issuer - Pickup Card
             if 'call issuer' in search_text or 'pick up card' in search_text or 'pickup card' in search_text:
                 return 'CALL ISSUER - PICKUP CARD'
             
+            # 10. 3D Secure
             if '3d secure' in search_text or 'three_d_secure' in search_text or '3ds' in search_text:
                 return '3D SECURE REQUIRED'
             
+            # 11. Limit Exceeded
             if 'limit exceeded' in search_text or 'exceeds limit' in search_text:
                 return 'LIMIT EXCEEDED'
             
+            # 12. Lost/Stolen
             if 'lost or stolen' in search_text or 'stolen card' in search_text:
                 return 'LOST/STOLEN CARD'
             
+            # 13. Address Mismatch (AVS)
             if 'address verification' in search_text or 'avs' in search_text or 'postal code mismatch' in search_text:
                 return 'ADDRESS MISMATCH'
             
+            # 14. Processor Declined
             if 'processor declined' in search_text or 'processor_declined' in search_text:
                 return 'PROCESSOR DECLINED'
             
+            # 15. Invalid Card
             if 'invalid card' in search_text or 'card number invalid' in search_text:
                 return 'INVALID CARD'
             
+            # 16. Cannot authorize (Policy)
             if 'cannot authorize' in search_text or 'not authorized at this time' in search_text:
                 return 'CANNOT AUTHORIZE (POLICY)'
             
+            # 17. Transaction not allowed
             if 'transaction not allowed' in search_text:
                 return 'TRANSACTION NOT ALLOWED'
             
-            if 'processor declined fraud' in search_text or 'fraud suspect' in search_text:
-                return 'PROCESSOR DECLINED - FRAUD SUSPECT'
-            
+            # 18. CleanTalk suspect
             if 'cleantalk' in search_text or 'antispam' in search_text or 'ct_bot_detector' in search_text:
                 return 'CLEANTALK SUSPECT'
             
+            # 19. Card not activated
             if 'card not activated' in search_text:
                 return 'CARD NOT ACTIVATED'
             
+            # 20. No Account
             if 'no account' in search_text or 'no_account' in search_text or 'account not found' in search_text:
                 return 'NO ACCOUNT'
             
+            # 21. Card Restricted
             if 'card restricted' in search_text or 'restricted card' in search_text:
                 return 'CARD RESTRICTED'
             
-            # رسالة البريد الإلكتروني غير الصالح - تم تعديلها للتعامل معها بشكل أفضل
+            # 22. Invalid Email
             if 'veljaven' in search_text or 'e-poštni' in search_text or 'elektronski naslov' in search_text:
-                # محاولة إعادة المحاولة مع إيميل مختلف (بدل ما نرجع خطأ فوري)
                 print(f"[!] Email {billing_email} rejected, will retry with different email")
-                continue  # إعادة المحاولة مع إيميل جديد
+                continue
             
+            # 23. Generic decline
             if 'declined' in search_text:
                 return 'DECLINED'
             
+            # 24. سبب واضح من الـ Reason
             if reason and len(reason) < 60:
                 return reason.upper()
             
+            # 25. رسالة واضحة من الصفحة
             if clean_messages and len(clean_messages) < 100:
                 return clean_messages.title()
             
